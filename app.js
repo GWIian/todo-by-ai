@@ -3,9 +3,11 @@ class TodoApp {
         this.tasks = [];
         this.tags = [];
         this.selectedTags = [];
+        this.charts = {};
         this.initializeTags();
         this.loadTasks();
         this.initializeUI();
+        this.initializeCharts();
         this.updateUI();
     }
 
@@ -162,15 +164,114 @@ class TodoApp {
         }
     }
 
+    // 初始化图表
+    initializeCharts() {
+        // 初始化完成率环形图
+        const completionCtx = document.getElementById('completionChart').getContext('2d');
+        this.charts.completion = new Chart(completionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['已完成', '未完成'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#4CAF50', '#FFA726']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+
+        // 初始化标签统计图
+        const tagCtx = document.getElementById('tagChart').getContext('2d');
+        this.charts.tag = new Chart(tagCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '任务数',
+                    data: [],
+                    backgroundColor: []
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 计算标签维度统计
+    calculateTagStats() {
+        const tagStats = new Map();
+        
+        // 初始化每个标签的统计
+        this.tags.forEach(tag => {
+            tagStats.set(tag.id, {
+                name: tag.name,
+                color: tag.color,
+                count: 0
+            });
+        });
+
+        // 统计每个标签的任务数
+        this.tasks.forEach(task => {
+            task.tags.forEach(tagId => {
+                if (tagStats.has(tagId)) {
+                    tagStats.get(tagId).count++;
+                }
+            });
+        });
+
+        // 转换为数组并按任务数排序
+        return Array.from(tagStats.values())
+            .filter(stat => stat.count > 0)
+            .sort((a, b) => b.count - a.count);
+    }
+
     // 更新任务统计
     updateStatistics() {
         const total = this.tasks.length;
         const completed = this.tasks.filter(task => task.completed).length;
         const pending = total - completed;
 
+        // 更新数字统计
         document.getElementById('totalTasks').textContent = total;
         document.getElementById('completedTasks').textContent = completed;
         document.getElementById('pendingTasks').textContent = pending;
+
+        // 更新完成率图表
+        if (this.charts.completion) {
+            this.charts.completion.data.datasets[0].data = [completed, pending];
+            this.charts.completion.update();
+        }
+
+        // 更新标签统计图表
+        if (this.charts.tag) {
+            const tagStats = this.calculateTagStats();
+            this.charts.tag.data.labels = tagStats.map(stat => stat.name);
+            this.charts.tag.data.datasets[0].data = tagStats.map(stat => stat.count);
+            this.charts.tag.data.datasets[0].backgroundColor = tagStats.map(stat => stat.color);
+            this.charts.tag.update();
+        }
     }
 
     // 创建任务项HTML
