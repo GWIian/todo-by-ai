@@ -14,9 +14,14 @@
         <!-- 添加任务表单 -->
         <div class="row mb-4">
             <div class="col">
-                <div class="input-group">
-                    <input type="text" id="newTaskInput" class="form-control" placeholder="输入新的任务...">
-                    <button class="btn btn-primary" id="addTaskBtn">添加</button>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="input-group mb-3">
+                            <input type="text" id="newTaskInput" class="form-control" placeholder="输入新的任务...">
+                            <button class="btn btn-primary" id="addTaskBtn">添加</button>
+                        </div>
+                        <div id="tagSelector" class="d-flex flex-wrap gap-2"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -35,9 +40,17 @@
                     <div class="card-body">
                         <h5 class="card-title">任务统计</h5>
                         <p class="card-text">
-                            总任务数：<span id="totalTasks">0</span>
-                            已完成：<span id="completedTasks">0</span>
-                            未完成：<span id="pendingTasks">0</span>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    总任务数：<span id="totalTasks">0</span>
+                                </div>
+                                <div class="col-md-4">
+                                    已完成：<span id="completedTasks">0</span>
+                                </div>
+                                <div class="col-md-4">
+                                    未完成：<span id="pendingTasks">0</span>
+                                </div>
+                            </div>
                         </p>
                     </div>
                 </div>

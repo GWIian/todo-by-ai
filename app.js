@@ -1,9 +1,35 @@
 class TodoApp {
     constructor() {
         this.tasks = [];
+        this.tags = [];
+        this.selectedTags = [];
+        this.initializeTags();
         this.loadTasks();
         this.initializeUI();
         this.updateUI();
+    }
+
+    // 初始化预设标签
+    initializeTags() {
+        const savedTags = localStorage.getItem('tags');
+        if (savedTags) {
+            this.tags = JSON.parse(savedTags);
+        } else {
+            // 预设标签
+            this.tags = [
+                { id: '1', name: '工作', color: '#FF6B6B', isPreset: true },
+                { id: '2', name: '学习', color: '#4ECDC4', isPreset: true },
+                { id: '3', name: '生活', color: '#45B7D1', isPreset: true },
+                { id: '4', name: '重要', color: '#96CEB4', isPreset: true },
+                { id: '5', name: '紧急', color: '#FFAD60', isPreset: true }
+            ];
+            this.saveTags();
+        }
+    }
+
+    // 保存标签到LocalStorage
+    saveTags() {
+        localStorage.setItem('tags', JSON.stringify(this.tags));
     }
 
     // UI元素初始化
@@ -11,12 +37,54 @@ class TodoApp {
         this.taskInput = document.getElementById('newTaskInput');
         this.addTaskBtn = document.getElementById('addTaskBtn');
         this.taskList = document.getElementById('taskList');
+        this.tagSelector = document.getElementById('tagSelector');
         
         // 绑定事件处理器
         this.addTaskBtn.addEventListener('click', () => this.addTask());
         this.taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addTask();
         });
+
+        // 初始化标签选择器
+        this.initializeTagSelector();
+    }
+
+    // 初始化标签选择器
+    initializeTagSelector() {
+        this.tagSelector.innerHTML = this.tags
+            .map(tag => this.createTagElement(tag))
+            .join('');
+
+        // 绑定标签点击事件
+        this.tagSelector.querySelectorAll('.tag').forEach(tagElement => {
+            tagElement.addEventListener('click', () => {
+                const tagId = tagElement.dataset.tagId;
+                this.toggleTagSelection(tagId, tagElement);
+            });
+        });
+    }
+
+    // 创建标签元素
+    createTagElement(tag) {
+        return `
+            <div class="tag"
+                 data-tag-id="${tag.id}"
+                 style="background-color: ${tag.color}; color: white;">
+                ${this.escapeHtml(tag.name)}
+            </div>
+        `;
+    }
+
+    // 切换标签选择状态
+    toggleTagSelection(tagId, tagElement) {
+        const index = this.selectedTags.indexOf(tagId);
+        if (index === -1) {
+            this.selectedTags.push(tagId);
+            tagElement.classList.add('selected');
+        } else {
+            this.selectedTags.splice(index, 1);
+            tagElement.classList.remove('selected');
+        }
     }
 
     // 从LocalStorage加载任务
@@ -40,13 +108,24 @@ class TodoApp {
             content: content,
             createdAt: Date.now(),
             completed: false,
-            tags: []
+            tags: [...this.selectedTags]
         };
 
         this.tasks.push(task);
         this.saveTasks();
         this.updateUI();
+        
+        // 重置输入和标签选择
         this.taskInput.value = '';
+        this.selectedTags = [];
+        this.tagSelector.querySelectorAll('.tag').forEach(tag => {
+            tag.classList.remove('selected');
+        });
+    }
+
+    // 获取标签详情
+    getTagById(tagId) {
+        return this.tags.find(tag => tag.id === tagId);
     }
 
     // 删除任务
@@ -79,13 +158,31 @@ class TodoApp {
 
     // 创建任务项HTML
     createTaskElement(task) {
+        const tagElements = task.tags
+            .map(tagId => {
+                const tag = this.getTagById(tagId);
+                if (!tag) return '';
+                return `
+                    <span class="task-tag"
+                          style="background-color: ${tag.color}; color: white;">
+                        ${this.escapeHtml(tag.name)}
+                    </span>
+                `;
+            })
+            .join('');
+
         return `
             <div class="task-item" data-task-id="${task.id}">
-                <input type="checkbox" class="task-checkbox" 
+                <input type="checkbox" class="task-checkbox"
                        ${task.completed ? 'checked' : ''}>
-                <span class="task-content ${task.completed ? 'completed' : ''}">
-                    ${this.escapeHtml(task.content)}
-                </span>
+                <div class="task-content-wrapper">
+                    <span class="task-content ${task.completed ? 'completed' : ''}">
+                        ${this.escapeHtml(task.content)}
+                    </span>
+                    <div class="task-tags">
+                        ${tagElements}
+                    </div>
+                </div>
                 <div class="task-actions">
                     <button class="btn-delete">❌</button>
                 </div>
