@@ -8,6 +8,8 @@ class TodoApp {
         this.loadTasks();
         this.initializeUI();
         this.initializeCharts();
+        this.initializeTheme();
+        this.initializeShortcuts();
         this.updateUI();
     }
 
@@ -51,6 +53,8 @@ class TodoApp {
         
         // 绑定任务相关事件
         this.addTaskBtn.addEventListener('click', () => this.addTask());
+        // 绑定主题切换事件
+        document.getElementById('themeToggle').addEventListener('click', () => this.toggleTheme());
         this.taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addTask();
         });
@@ -491,6 +495,53 @@ class TodoApp {
                 }
             });
         });
+    }
+
+    // 初始化主题
+    initializeTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+    }
+
+    // 切换主题
+    toggleTheme() {
+        const currentTheme = document.body.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        this.updateChartColors();
+    }
+
+    // 初始化快捷键
+    initializeShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+Enter 添加任务
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                this.addTask();
+            }
+            // Esc 关闭模态框
+            if (e.key === 'Escape') {
+                const modal = bootstrap.Modal.getInstance(document.querySelector('.modal.show'));
+                if (modal) modal.hide();
+            }
+        });
+    }
+
+    // 更新图表颜色
+    updateChartColors() {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#f8f9fa' : '#212529';
+
+        // 更新完成率图表
+        this.charts.completion.options.plugins.legend.labels.color = textColor;
+        this.charts.completion.update();
+
+        // 更新标签统计图表
+        this.charts.tag.options.scales.y.ticks.color = textColor;
+        this.charts.tag.options.scales.x.ticks.color = textColor;
+        this.charts.tag.update();
     }
 
     // 更新整个UI
