@@ -34,15 +34,32 @@ class TodoApp {
 
     // UI元素初始化
     initializeUI() {
+        // 任务相关元素
         this.taskInput = document.getElementById('newTaskInput');
         this.addTaskBtn = document.getElementById('addTaskBtn');
         this.taskList = document.getElementById('taskList');
         this.tagSelector = document.getElementById('tagSelector');
+
+        // 标签管理相关元素
+        this.newTagInput = document.getElementById('newTagInput');
+        this.newTagColor = document.getElementById('newTagColor');
+        this.addTagBtn = document.getElementById('addTagBtn');
+        this.tagList = document.getElementById('tagList');
+        this.tagValidationError = document.getElementById('tagValidationError');
         
-        // 绑定事件处理器
+        // 绑定任务相关事件
         this.addTaskBtn.addEventListener('click', () => this.addTask());
         this.taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addTask();
+        });
+
+        // 绑定标签相关事件
+        this.addTagBtn.addEventListener('click', () => this.addTag());
+        this.newTagInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.addTag();
+            }
         });
 
         // 初始化标签选择器
@@ -201,6 +218,180 @@ class TodoApp {
             .replace(/'/g, "&#039;");
     }
 
+    // 验证标签数据
+    validateTag(name, color, id = null) {
+        // 清除之前的错误信息
+        this.tagValidationError.textContent = '';
+        this.tagValidationError.classList.add('d-none');
+
+        // 验证标签名称
+        if (!name || name.trim().length === 0) {
+            this.showTagError('标签名称不能为空');
+            return false;
+        }
+
+        if (name.trim().length > 10) {
+            this.showTagError('标签名称不能超过10个字符');
+            return false;
+        }
+
+        // 验证标签名称唯一性
+        const nameExists = this.tags.some(tag =>
+            tag.name === name.trim() && (!id || tag.id !== id)
+        );
+        if (nameExists) {
+            this.showTagError('标签名称已存在');
+            return false;
+        }
+
+        // 验证颜色格式
+        const colorRegex = /^#[0-9A-Fa-f]{6}$/;
+        if (!colorRegex.test(color)) {
+            this.showTagError('无效的颜色格式');
+            return false;
+        }
+
+        return true;
+    }
+
+    // 显示标签错误信息
+    showTagError(message) {
+        this.tagValidationError.textContent = message;
+        this.tagValidationError.classList.remove('d-none');
+    }
+
+    // 添加新标签
+    addTag() {
+        const name = this.newTagInput.value.trim();
+        const color = this.newTagColor.value;
+
+        if (!this.validateTag(name, color)) {
+            return;
+        }
+
+        const tag = {
+            id: crypto.randomUUID(),
+            name: name,
+            color: color,
+            isPreset: false
+        };
+
+        this.tags.push(tag);
+        this.saveTags();
+        this.updateTagsList();
+        this.initializeTagSelector();
+
+        // 重置输入
+        this.newTagInput.value = '';
+        this.newTagColor.value = '#FF6B6B';
+    }
+
+    // 编辑标签
+    editTag(id) {
+        const tag = this.getTagById(id);
+        if (!tag || tag.isPreset) return;
+
+        const listItem = document.querySelector(`[data-tag-id="${id}"]`);
+        const tagName = listItem.querySelector('.tag-name').textContent;
+        const tagColor = tag.color;
+
+        // 创建编辑表单
+        listItem.innerHTML = `
+            <form class="tag-edit-form">
+                <input type="text" class="form-control" value="${this.escapeHtml(tagName)}" required>
+                <input type="color" class="form-control form-control-color" value="${tagColor}">
+                <button type="submit" class="btn btn-sm btn-success">保存</button>
+                <button type="button" class="btn btn-sm btn-secondary">取消</button>
+            </form>
+        `;
+
+        const form = listItem.querySelector('form');
+        const cancelBtn = form.querySelector('.btn-secondary');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newName = form.querySelector('input[type="text"]').value;
+            const newColor = form.querySelector('input[type="color"]').value;
+
+            if (this.validateTag(newName, newColor, id)) {
+                tag.name = newName;
+                tag.color = newColor;
+                this.saveTags();
+                this.updateTagsList();
+                this.initializeTagSelector();
+                this.updateUI();
+            }
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            this.updateTagsList();
+        });
+    }
+
+    // 删除标签
+    deleteTag(id) {
+        const tag = this.getTagById(id);
+        if (!tag || tag.isPreset) return;
+
+        // 从任务中移除该标签
+        this.tasks.forEach(task => {
+            const index = task.tags.indexOf(id);
+            if (index !== -1) {
+                task.tags.splice(index, 1);
+            }
+        });
+
+        // 从标签列表中移除
+        this.tags = this.tags.filter(t => t.id !== id);
+        
+        this.saveTags();
+        this.saveTasks();
+        this.updateTagsList();
+        this.initializeTagSelector();
+        this.updateUI();
+    }
+
+    // 创建标签列表项
+    createTagListItem(tag) {
+        return `
+            <div class="list-group-item tag-list-item" data-tag-id="${tag.id}">
+                <div class="tag-color-preview" style="background-color: ${tag.color}"></div>
+                <span class="tag-name">${this.escapeHtml(tag.name)}</span>
+                ${tag.isPreset ? '<span class="preset-tag-badge">预设</span>' : ''}
+                <div class="tag-actions">
+                    ${tag.isPreset ? '' : `
+                        <button class="btn btn-sm btn-outline-primary edit-tag-btn">编辑</button>
+                        <button class="btn btn-sm btn-outline-danger delete-tag-btn">删除</button>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    // 更新标签列表
+    updateTagsList() {
+        this.tagList.innerHTML = this.tags
+            .map(tag => this.createTagListItem(tag))
+            .join('');
+
+        // 绑定编辑和删除按钮事件
+        this.tagList.querySelectorAll('.edit-tag-btn').forEach(btn => {
+            const listItem = btn.closest('.tag-list-item');
+            btn.addEventListener('click', () => {
+                this.editTag(listItem.dataset.tagId);
+            });
+        });
+
+        this.tagList.querySelectorAll('.delete-tag-btn').forEach(btn => {
+            const listItem = btn.closest('.tag-list-item');
+            btn.addEventListener('click', () => {
+                if (confirm('确定要删除这个标签吗？这将同时从所有任务中移除该标签。')) {
+                    this.deleteTag(listItem.dataset.tagId);
+                }
+            });
+        });
+    }
+
     // 更新整个UI
     updateUI() {
         // 更新任务列表
@@ -226,6 +417,7 @@ class TodoApp {
 
         // 更新统计信息
         this.updateStatistics();
+        this.updateTagsList();
     }
 }
 

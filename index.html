@@ -9,6 +9,30 @@
 </head>
 <body>
     <div class="container py-5">
+        <!-- 标签管理模态框 -->
+        <div class="modal fade" id="tagManageModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">标签管理</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <div class="d-flex gap-2 mb-2">
+                                <input type="text" id="newTagInput" class="form-control" placeholder="输入标签名称...">
+                                <input type="color" id="newTagColor" class="form-control form-control-color" value="#FF6B6B" title="选择标签颜色">
+                                <button class="btn btn-primary" id="addTagBtn">添加</button>
+                            </div>
+                            <div id="tagValidationError" class="text-danger small d-none"></div>
+                        </div>
+                        <div id="tagList" class="list-group">
+                            <!-- 标签列表将通过JavaScript动态生成 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <h1 class="mb-4">待办事项</h1>
         
         <!-- 添加任务表单 -->
@@ -19,6 +43,9 @@
                         <div class="input-group mb-3">
                             <input type="text" id="newTaskInput" class="form-control" placeholder="输入新的任务...">
                             <button class="btn btn-primary" id="addTaskBtn">添加</button>
+                            <button class="btn btn-outline-secondary" id="manageTagsBtn" data-bs-toggle="modal" data-bs-target="#tagManageModal">
+                                管理标签
+                            </button>
                         </div>
                         <div id="tagSelector" class="d-flex flex-wrap gap-2"></div>
                     </div>
